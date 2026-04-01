@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>罚单地图可视化</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Element Plus CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus@2.4.4/dist/index.css">
+  <!-- 自定义样式 -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+      font-size: 14px;
+      color: #303133;
+      background-color: #f5f7fa;
+    }
+    #app {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      padding: 8px 24px;
+      background-color: #ffffff;
+      border-bottom: 1px solid #e4e7ed;
+      box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.05);
+    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .header-left h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1890ff;
+      margin: 0;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .view-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .search-container {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .search-item {
+      display: flex;
+      align-items: center;
+    }
+    .map-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    .info-panel {
+      position: absolute;
+      top: 100px;
+      right: 24px;
+      width: 320px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      z-index: 1000;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+      transition: all 0.3s ease;
+    }
+    .info-panel:hover {
+      box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.15);
+    }
+    .info-panel h3 {
+      margin-bottom: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #303133;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e4e7ed;
+    }
+    .ticket-item {
+      padding: 16px;
+      border-bottom: 1px solid #f0f2f5;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .ticket-item:hover {
+      background-color: #f5f7fa;
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.08);
+    }
+    .ticket-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .ticket-item .ticket-time {
+      font-size: 12px;
+      color: #909399;
+      margin-bottom: 8px;
+    }
+    .ticket-item .ticket-location {
+      font-size: 14px;
+      font-weight: 500;
+      color: #303133;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    .ticket-item .ticket-details {
+      font-size: 13px;
+      color: #606266;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .ticket-item .ticket-type {
+      background-color: #ecf5ff;
+      color: #1890ff;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .ticket-item .ticket-amount {
+      font-weight: 500;
+      color: #f56c6c;
+    }
+    /* 热力图配置面板样式 */
+    .config-item {
+      margin-bottom: 20px;
+    }
+    .config-item label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #606266;
+      font-weight: 500;
+    }
+    .config-value {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 14px;
+      color: #1890ff;
+      font-weight: 500;
+      min-width: 30px;
+      text-align: right;
+    }
+    .config-info {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #e4e7ed;
+      font-size: 12px;
+      color: #909399;
+    }
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 16px;
+      }
+      .search-container {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .info-panel {
+        width: calc(100vw - 48px);
+        right: 24px;
+        top: 180px;
+        max-height: 300px;
+      }
+    }
+    @media (max-width: 480px) {
+      .header h1 {
+        font-size: 18px;
+      }
+      .search-container {
+        gap: 8px;
+      }
+      .info-panel {
+        padding: 16px;
+        top: 160px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1>罚单地图可视化</h1>
+        </div>
+        <div class="header-right">
+          <div class="view-buttons">
+            <el-button 
+              :type="activeTab === 'detail' ? 'primary' : 'default'"
+              @click="switchView('detail')"
+            >
+              明细视图
+            </el-button>
+            <el-button 
+              :type="activeTab === 'heatmap' ? 'primary' : 'default'"
+              @click="switchView('heatmap')"
+            >
+              热力图视图
+            </el-button>
+          </div>
+          <div class="search-container">
+            <div class="search-item">
+              <el-date-picker
+                v-model="searchParams.timeRange"
+                type="daterange"
+                range-separator="至"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期"
+                format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                style="width: 250px"
+              />
+            </div>
+            <div class="search-item">
+              <el-select
+                v-model="searchParams.city"
+                placeholder="城市"
+                filterable
+                style="width: 120px"
+              >
+                <el-option
+                  v-for="city in cities"
+                  :key="city.value"
+                  :label="city.label"
+                  :value="city.value"
+                />
+              </el-select>
+            </div>
+            <div class="search-item">
+              <el-input
+                v-model="searchParams.keyword"
+                placeholder="POI/道路"
+                style="width: 150px"
+              />
+            </div>
+            <el-button type="primary" @click="searchTickets">查询</el-button>
+            <el-button @click="resetSearch">重置</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="map-container">
+      <div id="map"></div>
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>加载中...</p>
+      </div>
+      <!-- 错误提示 -->
+      <div v-if="error" class="error-message">
+        <el-alert
+          :title="error"
+          type="error"
+          show-icon
+          closable
+          @close="error = ''"
+        ></el-alert>
+      </div>
+      <div class="info-panel" v-if="activeTab === 'detail'">
+        <h3>罚单列表</h3>
+        <div v-if="filteredTickets.length === 0 && !loading" class="no-data">
+          <p>暂无数据</p>
+        </div>
+        <div
+          v-for="ticket in filteredTickets"
+          :key="ticket.id"
+          class="ticket-item"
+          @click="locateTicket(ticket)"
+        >
+          <div class="ticket-time">{{ ticket.time }}</div>
+          <div class="ticket-location">{{ ticket.location }}</div>
+          <div class="ticket-details">
+            <span class="ticket-type">{{ ticket.type }}</span>
+            <span class="ticket-amount">¥{{ ticket.amount }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="info-panel" v-else-if="activeTab === 'heatmap'">
+        <h3>热力图配置</h3>
+        <div class="config-item">
+          <label>半径 (px):</label>
+          <el-slider v-model="heatmapConfig.radius" :min="10" :max="100" :step="1" @change="updateHeatmap"></el-slider>
+          <span class="config-value">{{ heatmapConfig.radius }}</span>
+        </div>
+        <div class="config-item">
+          <label>模糊度 (px):</label>
+          <el-slider v-model="heatmapConfig.blur" :min="5" :max="50" :step="1" @change="updateHeatmap"></el-slider>
+          <span class="config-value">{{ heatmapConfig.blur }}</span>
+        </div>
+        <div class="config-item">
+          <label>热力值最大值:</label>
+          <el-slider v-model="heatmapConfig.max" :min="1" :max="50" :step="1" @change="updateHeatmap"></el-slider>
+          <span class="config-value">{{ heatmapConfig.max }}</span>
+        </div>
+        <div class="config-info">
+          <p>提示：调整参数后，热力图会自动更新</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet热力图插件 -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Element Plus JS -->
+  <script src="https://unpkg.com/element-plus@2.4.4/dist/index.full.js"></script>
+  <!-- 主应用 -->
+  <script src="./src/main.js"></script>
+</body>
+</html>
