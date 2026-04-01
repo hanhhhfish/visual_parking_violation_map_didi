@@ -75,6 +75,39 @@ const mockTickets = [
 ];
 ```
 
+### 删除 Mock 数据
+
+当接入真实数据后，建议删除或注释掉 Mock 数据，以避免混淆。具体操作如下：
+
+1. 找到 `index.html` 文件中的 Mock 数据定义：
+   ```javascript
+   // Mock数据 - 模拟正式API返回格式
+   const mockTickets = [
+     {
+       id: 1,
+       time: '2025-03-15 08:30:00',
+       location: '北京市朝阳区建国路88号',
+       longitude: 116.4668,
+       latitude: 39.9183,
+       poi: '国贸中心',
+       road: '建国路',
+       type: '违停',
+       amount: 200
+     },
+     // 更多数据...
+   ];
+   ```
+
+2. 注释掉或删除这段代码
+
+3. 同时，确保 `fetchTicketsFromAPI` 函数中使用的是真实 API 数据，而不是 Mock 数据：
+   ```javascript
+   // 确保使用真实API数据
+   const data = await response.json();
+   // 而不是
+   // const data = mockTickets;
+   ```
+
 ### 接入真实数据
 
 要接入公司的真实数据，请修改 `index.html` 文件中的 `fetchTicketsFromAPI` 函数：
@@ -159,6 +192,37 @@ const mockTickets = [
 - 热力图视图需要足够多的罚单数据才能显示明显的密度差异
 - 接入真实数据时，需要确保 API 接口返回的数据格式与应用期望的格式一致
 - 对于大量数据，可能需要优化加载性能，如使用分页加载或聚类展示
+
+## 更换地图底图
+
+本应用默认使用高德地图作为底图，如果需要更换为其他地图服务（如滴滴地图），可以按照以下步骤操作：
+
+1. 找到 `index.html` 文件中的地图初始化代码：
+   ```javascript
+   // 添加底图（使用高德地图作为替代方案）
+   const tileLayer = L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+     subdomains: ['1', '2', '3', '4'],
+     attribution: '高德地图'
+   });
+   ```
+
+2. 替换为其他地图服务的 URL 模板，例如滴滴地图（如果有公开的 API）：
+   ```javascript
+   // 添加底图（使用滴滴地图）
+   const tileLayer = L.tileLayer('https://your-didi-map-url/{z}/{x}/{y}.png', {
+     attribution: '滴滴地图'
+   });
+   ```
+
+3. 注意：不同地图服务的 URL 模板和参数可能不同，需要根据具体地图服务的 API 文档进行调整
+
+4. 如果地图服务需要 API key，需要在 URL 中添加相应的参数：
+   ```javascript
+   // 添加底图（使用需要 API key 的地图服务）
+   const tileLayer = L.tileLayer('https://your-map-url/{z}/{x}/{y}.png?key=YOUR_API_KEY', {
+     attribution: '地图服务名称'
+   });
+   ```
 
 ## 联系方式
 
